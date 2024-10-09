@@ -1,0 +1,20 @@
+﻿<h3>RedirectToLogin</h3>
+
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Get the current user's authentication state
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Check if the user is authenticated
+        if (!user.Identity.IsAuthenticated)
+        {
+            // Redirect to the login page if not authenticated
+            NavManager.NavigateTo("/login");
+        }
+    }
+}

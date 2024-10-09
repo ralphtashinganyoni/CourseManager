@@ -1,0 +1,88 @@
+﻿@page "/login"
+@using CourseManager.UI.Identity
+@inject IAccountManagement Acct
+@inject NavigationManager NavigationManager
+@layout AuthenticationLayout
+
+<AuthorizeView>
+    <Authorized>
+        <div class="alert alert-success">You are logged in as @context.User.Identity?.Name.</div>
+    </Authorized>
+    <NotAuthorized>
+        <h1>Login</h1>
+        @if (errors)
+        {
+            @foreach (var error in errorList)
+            {
+                <div class="alert alert-danger">@error</div>
+            }
+        }
+        <div class="flex-outer">
+
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input required class="form-control" id="email" name="emailInput" placeholder="Enter your email address" type="email" @bind-value="email" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input required class="form-control" id="password" name="passwordInput" placeholder="Enter your password" type="password" @bind-value="password" />
+            </div>
+            <div class="form-group mt-3">
+                <button class="btn btn-primary" @onclick="DoLoginAsync">Login</button>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <span>Don't have an account?</span>
+            <button class="btn btn-link" @onclick="NavigateToRegister">Register</button>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool success, errors;
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private string[] errorList = [];
+
+    public async Task DoLoginAsync()
+    {
+        success = errors = false;
+        errorList = [];
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            errors = true;
+            errorList = new[] { "Email is required." };
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            errors = true;
+            errorList = new[] { "Password is required." };
+            return;
+        }
+
+        var result = await Acct.LoginAsync(email!, password!);
+
+        if (result.Succeeded)
+        {
+            success = true;
+            email = password = string.Empty;
+            NavigationManager.NavigateTo("/");
+
+        }
+        else
+        {
+            errors = true;
+            errorList = result.ErrorList;
+        }
+    }
+
+    private void NavigateToRegister()
+    {
+        NavigationManager.NavigateTo("/register");
+    }
+}

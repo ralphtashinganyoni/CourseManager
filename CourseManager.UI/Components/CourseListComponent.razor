@@ -1,0 +1,264 @@
+﻿@using CourseManager.UI.DTOs
+@using CourseManager.UI.Models
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services
+@using System.Security.Claims
+@inject ICourseService CourseService
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAttendeeService AttendeeService
+
+
+<div style="margin:0 auto; width:50%; text-align:center;">
+    <input style="width:60%;" type="text" @bind-value="SearchString" />
+    <button class="btn btn-primary" @onclick="(() => SearchStringChange())">
+        Search
+    </button>
+</div>
+
+@if (courses == null)
+{
+    <span>Loading...</span>
+}
+else if (courses.Count > 0)
+{
+    <table class="table mt-4">
+        <thead>
+            <tr>
+                <th>Course title</th>
+                <th>Course teacher</th>
+                <th>Course date</th>
+                <th>Course capacity</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var course in courses)
+            {
+                <tr>
+                    <td>@course.CourseTitle</td>
+                    <td>@course.CourseTeacher</td>
+                    <td>@course.CourseStartDateTime.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>@course.CourseCapacity</td>
+                    <td>
+                        <button class="btn btn-info" @onclick="(() => ShowCourseDetails(course.Id))">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        <button class="btn btn-primary" @onclick="(() => EditCourse(course.Id))">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-danger" @onclick="(() => DeleteCourseDialog(course.Id))">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                    <td>
+                        <button class="btn btn-success" disabled="@course.IsCapacityFull" @onclick="(() => JoinCourse(course.Id))">
+                            <i class="bi bi-person"></i>
+                        </button>
+                        <button class="btn btn-danger" @onclick="(() => DeregisterCourse(course.Id))">
+                            <i class="bi bi-person-x"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div style="margin:0 auto; width:33%; text-align:center;">
+        <input type="button" class="btn-lg btn" id="prev" disabled="@HasPreviousPage" @onclick="PreviousPage" value="Previous" />
+
+        @for (int i = 1; i <= TotalPages; i++)
+        {
+            int j = i;
+
+            if (i > 0)
+            {
+                if (i == CurPage)
+                {
+                    <input type="button" class="btn-lg btn p-2" readonly="true" style="font-weight:bold;cursor:pointer" @onclick="() => GetCourseData(j)" value="@i"></input>
+                }
+                else
+                {
+                    <input type="button" class="btn-lg btn p-2" readonly="true" style="cursor:pointer" @onclick="() => GetCourseData(j)" value="@i"></input>
+                }
+            }
+        }
+
+        <input type="button" class="btn-lg btn" disabled="@HasNextPage" id="next" @onclick="NextPage" value="Next" />
+    </div>
+}
+else
+{
+    <span>There are no courses to display.</span>
+}
+
+<PINConfirmationDialog @ref="child" OnClose="@PINConfirmationDialogClose"></PINConfirmationDialog>
+
+@code 
+{
+    [Parameter]
+    public DateTime? DateFrom { get; set; }
+    [Parameter]
+    public DateTime? DateTo { get; set; }
+    [Parameter]
+    public string? UserId { get; set; }
+    [Parameter]
+    public bool IsUserNotEnrolled { get; set; }
+
+    PINConfirmationDialog child;
+
+    List<CoursesListModel>? courses = null;
+
+    const int PageSize = 5;
+    private int CurPage = 1;
+    private bool HasPreviousPage = false;
+    private bool HasNextPage = false;
+    private int TotalPages = 1;
+
+    private string SearchString = string.Empty;
+
+    private async void PINConfirmationDialogClose(PINConfirmationModel result)
+    {
+        if (result.IsDialogOk)
+        {
+            if (result.InsertedPIN == null)
+            {
+                ToastService.ShowError("PIN was not inserted!");
+            }
+            else
+            {
+                if (await CourseService.CheckCoursePIN(result.CourseId, result.InsertedPIN))
+                {
+                    if (result.AfterDialogActionType == "edit")
+                    {
+                        NavigationManager.NavigateTo($"course-edit/{result.CourseId}");
+                    }
+                    else
+                    {
+                        await DeleteCourse(result.CourseId);
+                        StateHasChanged();
+                    }
+                }
+                else
+                {
+                    ToastService.ShowError("Incorrect PIN!");
+                }
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await GetCourseData(IsUserNotEnrolled);
+    }
+
+    protected async Task GetCourseData(bool isNotEnrolled = false)
+    {
+        if (string.IsNullOrEmpty(UserId))
+        {
+            var response = await CourseService.GetAllCourses(CurPage, PageSize, SearchString, DateFrom, DateTo);
+            ProcessResponse(response);
+        }
+        else
+        {
+            var response = isNotEnrolled
+                ? await CourseService.GetCoursesUserIsNotEnrolledIn(UserId, CurPage, PageSize, SearchString, DateFrom, DateTo)
+                : await CourseService.GetUserEnrolledCourses(UserId, CurPage, PageSize, SearchString, DateFrom, DateTo);
+
+            ProcessResponse(response);
+        }
+    }
+
+    private void ProcessResponse(PageResponse<CoursesListModel> response)
+    {
+        courses = response.Items;
+        HasPreviousPage = !response.HasPreviousPage;
+        HasNextPage = !response.HasNextPage;
+        TotalPages = response.TotalPages;
+        StateHasChanged();
+    }
+
+
+    protected async Task GetCourseData(int i)
+    {
+        CurPage = i;
+        await GetCourseData(IsUserNotEnrolled);
+    }
+
+    protected async Task NextPage()
+    {
+        CurPage++;
+        await GetCourseData(IsUserNotEnrolled);
+    }
+
+    protected async Task PreviousPage()
+    {
+        if (CurPage > 1)
+        {
+            CurPage--;
+            await GetCourseData(IsUserNotEnrolled);
+        }
+    }
+
+    private void ShowCourseDetails(int id)
+    {
+        NavigationManager.NavigateTo($"course-details/{id}");
+    }
+
+    private void EditCourse(int id)
+    {
+        child.ShowPINConfirmationDialog("PIN required!", "PIN is required for ", id, "edit", null);
+    }
+
+    private void DeleteCourseDialog(int id)
+    {
+        child.ShowPINConfirmationDialog("PIN required!", "PIN is required for ", id, "delete", null);
+    }
+
+    private async Task DeleteCourse(int id)
+    {
+        var response = await CourseService.DeleteCourse(id);
+        if (response.IsSuccessful)
+        {
+            ToastService.ShowSuccess(response.Message);
+            await GetCourseData();
+        }
+        else
+        {
+            ToastService.ShowError(response.Message);
+        }
+    }
+
+    private void JoinCourse(int id)
+    {
+        NavigationManager.NavigateTo($"course-join/{id}");
+    }
+
+    private async void DeregisterCourse(int id)
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var emailClaim = user.FindFirst(ClaimTypes.Email);
+
+        if (emailClaim != null)
+        {
+            if (await AttendeeService.CheckIfAttendeeExists(id, emailClaim.Value))
+            
+                NavigationManager.NavigateTo($"course-deregister/{id}");
+            else
+                ToastService.ShowError("Not registered to the current course");   // Set the CourseId
+        }
+       
+
+
+    }
+
+    private async void SearchStringChange()
+    {
+        await GetCourseData(IsUserNotEnrolled);
+        SearchString = string.Empty;
+        StateHasChanged();
+    }
+}

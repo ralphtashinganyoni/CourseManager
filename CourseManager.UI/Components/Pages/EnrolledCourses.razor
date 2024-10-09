@@ -1,0 +1,44 @@
+﻿@page "/enrolled-courses"
+@attribute [Authorize]
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services
+@using System.Security.Claims
+@inject ICourseService CourseService
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Enrolled courses</PageTitle>
+
+@code {
+    private string userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            var emailClaim = user.FindFirst(ClaimTypes.Email);
+            if (emailClaim != null)
+            {
+                userId = emailClaim.Value;
+                StateHasChanged();  // Trigger a re-render after userId is set
+            }
+            else
+            {
+                Console.WriteLine("Email claim is null");
+            }
+        }
+    }
+}
+
+@if (userId != null)
+{
+    <CourseListComponent UserId="@userId" IsUserNotEnrolled="false" DateFrom="null" DateTo="null"></CourseListComponent>
+}
+else
+{
+    <p>Loading your courses...</p> 
+}

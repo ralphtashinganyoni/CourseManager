@@ -1,0 +1,58 @@
+﻿@page "/course-details/{id:int}"
+@attribute [Authorize]
+@using CourseManager.UI.Models
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services
+@inject ICourseService CourseService
+@inject IToastService ToastService
+
+<h1>Course details</h1>
+<hr />
+
+<div style="font-size:large">
+    <div class="row mb-5">
+        <div class="col-2">Course title:</div>
+        <div class="col-6" style="margin-left:25px;">@course.CourseTitle</div>
+    </div>
+    <div class="row mb-5">
+        <div class="col-2">Course description:</div>
+        <div class="col-8" style="margin-left:25px;">@course.CourseDescription</div>
+    </div>
+    <div class="row mb-5">
+        <div class="col-2">Course teacher:</div>
+        <div class="col-6" style="margin-left:25px;">@course.CourseTeacher</div>
+    </div>
+    <div class="row mb-5">
+        <div class="col-2">Course teacher email:</div>
+        <div class="col-6" style="margin-left:25px;">@course.CourseTeacherEmail</div>
+    </div>
+    <div class="row mb-5">
+        <div class="col-2">Course date:</div>
+        <div class="col-6" style="margin-left:25px;">@course.CourseStartDateTime</div>
+    </div>
+    <div class="row mb-5">
+        <div class="col-2">Course capacity:</div>
+        <div class="col-6" style="margin-left:25px;">@course.CourseCapacity</div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+
+    CourseDetailsModel course = new CourseDetailsModel();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var response = await CourseService.GetCourseDetailsById(Id);
+        if (response.IsSuccessful)
+        {
+            course = response.Data;
+        }
+        else
+        {
+            ToastService.ShowError(response.Message);
+        }
+    }
+}

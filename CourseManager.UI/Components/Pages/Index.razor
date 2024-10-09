@@ -1,0 +1,38 @@
+﻿@page "/"
+@attribute [Authorize]
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services
+@inject ICourseService CourseService
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+
+<PageTitle>Index</PageTitle>
+
+<div style="display: flex">
+    <h1 style="margin: 0">
+        This month's courses
+    </h1>
+    <button class="btn btn-primary" @onclick="(() => CreateCourse())" style="margin-left: auto">
+        Create new course
+    </button>
+</div>
+<hr />
+<CourseListComponent DateFrom="DateFrom" DateTo="DateTo"></CourseListComponent>
+
+@code
+{
+    public DateTime DateFrom;
+    public DateTime DateTo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var Today = DateTime.Today;
+        DateFrom = new DateTime(Today.Year, Today.Month, 1);
+        DateTo = DateFrom.AddMonths(1).AddDays(-1);
+    }
+
+    private void CreateCourse()
+    {
+        NavigationManager.NavigateTo("course-edit");
+    }
+}

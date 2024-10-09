@@ -1,0 +1,57 @@
+﻿@page "/attendee-edit/{id:int}"
+@attribute [Authorize]
+@using CourseManager.UI.Models
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services
+@inject IAttendeeService AttendeeService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+
+<h1>Edit attendee</h1>
+<hr />
+
+<EditForm Model="attendee" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-3">
+        <label for="Email">Email</label>
+        <InputText id="Email" @bind-Value="attendee.Email" class="form-control"></InputText>
+    </div>
+    <br />
+    <button type="submit" class="btn btn-primary">Update</button>
+
+</EditForm>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    AttendeeModel attendee = new AttendeeModel();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var response = await AttendeeService.GetAttendeeById(Id);
+        if (response.IsSuccessful)
+        {
+            attendee = response.Data;
+        }
+        else
+        {
+            ToastService.ShowError(response.Message);
+        }
+    }
+
+    private async void HandleSubmit()
+    {
+        var response = await AttendeeService.UpdateAttendee(Id, attendee);
+        if (response.IsSuccessful)
+        {
+            ToastService.ShowSuccess(response.Message);
+            NavigationManager.NavigateTo($"/course-edit/{attendee.CourseId}");
+        }
+        else
+        {
+            ToastService.ShowError(response.Message);
+        }
+    }
+}

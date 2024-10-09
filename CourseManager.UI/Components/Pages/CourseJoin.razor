@@ -1,0 +1,103 @@
+﻿@page "/course-join/{courseid:int}"
+@attribute [Authorize]
+@using CourseManager.UI.Models
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services
+@using System.Security.Claims
+@inject ICourseService CourseService
+@inject IAttendeeService AttendeeService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h1>Confirm Enrollment for <b>@course.CourseTitle</b></h1>
+<hr />
+
+@if (course != null)
+{
+    <div>
+        <p>Are you sure you want to enroll in <b>@course.CourseTitle</b>?</p>
+        <button class="btn btn-primary" @onclick="HandleSubmit">Confirm Enrollment</button>
+        <button class="btn btn-secondary" @onclick="CancelEnrollment">Cancel</button>
+    </div>
+}
+else
+{
+    <p>Loading course details...</p>
+}
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private AttendeeModel attendee = new AttendeeModel();
+    private CourseDetailsModel course = new CourseDetailsModel();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Fetch course details
+        var response = await CourseService.GetCourseDetailsById(CourseId);
+        if (response.IsSuccessful)
+        {
+            course = response.Data;
+        }
+        else
+        {
+            ToastService.ShowError(response.Message);
+            NavigationManager.NavigateTo("/");  // Redirect to homepage if course is not found
+        }
+
+        // Get current user email
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var emailClaim = user.FindFirst(ClaimTypes.Email);
+
+        if (emailClaim != null)
+        {
+            attendee.Email = emailClaim.Value;  // Automatically set attendee's email
+            attendee.CourseId = CourseId;       // Set the CourseId
+        }
+        else
+        {
+            ToastService.ShowError("Unable to retrieve user email");
+            NavigationManager.NavigateTo("/");  // Redirect to homepage if email is not found
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        // Check if the course is full
+        if (await CourseService.CheckIfCourseCapacityFull(CourseId))
+        {
+            // Check if the user is already enrolled
+            if (await AttendeeService.CheckIfAttendeeExists(CourseId, attendee.Email) == false)
+            {
+                // Enroll the user
+                var response = await AttendeeService.CreateAttendee(attendee);
+                if (response.IsSuccessful)
+                {
+                    ToastService.ShowSuccess(response.Message);
+                    NavigationManager.NavigateTo("/");  // Redirect to homepage after successful enrollment
+                }
+                else
+                {
+                    ToastService.ShowError(response.Message);
+                }
+            }
+            else
+            {
+                ToastService.ShowError("You are already enrolled in this course.");
+            }
+        }
+        else
+        {
+            ToastService.ShowError("The course is already full.");
+            NavigationManager.NavigateTo("/");  // Redirect to homepage if course is full
+        }
+    }
+
+    private void CancelEnrollment()
+    {
+        NavigationManager.NavigateTo("/");  // Redirect to homepage if the user cancels
+    }
+}

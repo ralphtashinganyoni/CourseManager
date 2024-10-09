@@ -1,0 +1,16 @@
+﻿@page "/all-courses"
+@attribute [Authorize]
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services
+@inject ICourseService CourseService
+@inject NavigationManager NavigationManager
+@inject IToastService ToastService
+
+<PageTitle>All courses</PageTitle>
+
+<CourseListComponent DateFrom="null" DateTo="null"></CourseListComponent>
+
+@code 
+{
+    
+}

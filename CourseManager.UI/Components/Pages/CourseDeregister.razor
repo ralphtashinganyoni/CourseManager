@@ -1,0 +1,99 @@
+﻿@page "/course-deregister/{courseid:int}"
+@attribute [Authorize]
+@using CourseManager.UI.Models
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services
+@using System.Security.Claims
+@inject ICourseService CourseService
+@inject IAttendeeService AttendeeService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h1>Confirm Deregistration from <b>@course.CourseTitle</b></h1>
+<hr />
+
+@if (course != null)
+{
+    <div>
+        <p>Are you sure you want to deregister from <b>@course.CourseTitle</b>?</p>
+        <button class="btn btn-danger" @onclick="HandleDeregister">Confirm Deregistration</button>
+        <button class="btn btn-secondary" @onclick="CancelDeregistration">Cancel</button>
+    </div>
+}
+else
+{
+    <p>Loading course details...</p>
+}
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private AttendeeModel attendee = new AttendeeModel();
+    private CourseDetailsModel course = new CourseDetailsModel();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Fetch course details
+        var response = await CourseService.GetCourseDetailsById(CourseId);
+        if (response.IsSuccessful)
+        {
+            course = response.Data;
+        }
+        else
+        {
+            ToastService.ShowError(response.Message);
+            NavigationManager.NavigateTo("/");  // Redirect to homepage if course is not found
+        }
+
+        // Get current user email
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var emailClaim = user.FindFirst(ClaimTypes.Email);
+
+        if (emailClaim != null)
+        {
+            attendee.Email = emailClaim.Value;  // Automatically set attendee's email
+            attendee.CourseId = CourseId;       // Set the CourseId
+        }
+        else
+        {
+            ToastService.ShowError("Unable to retrieve user email");
+            NavigationManager.NavigateTo("/");  // Redirect to homepage if email is not found
+        }
+    }
+
+    private async Task HandleDeregister()
+    {
+        // Check if the user is enrolled in the course
+        if (await AttendeeService.CheckIfAttendeeExists(CourseId, attendee.Email))
+        {
+            var attendeeResponse = await AttendeeService.GetAttendee(CourseId, attendee.Email);
+
+            if (attendeeResponse.IsSuccessful)
+            {
+                // Deregister the user
+                var response = await AttendeeService.DeleteAttendee(attendeeResponse.Data.Id);
+                if (response.IsSuccessful)
+                {
+                    ToastService.ShowSuccess(response.Message);
+                    NavigationManager.NavigateTo("/");  // Redirect to homepage after successful deregistration
+                }
+                else
+                {
+                    ToastService.ShowError(response.Message);
+                }
+            }
+        }
+        else
+        {
+            ToastService.ShowError("You are not enrolled in this course.");
+        }
+    }
+
+    private void CancelDeregistration()
+    {
+        NavigationManager.NavigateTo("/");  // Redirect to homepage if the user cancels
+    }
+}

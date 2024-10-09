@@ -1,0 +1,236 @@
+﻿@page "/course-edit"
+@page "/course-edit/{id:int}"
+@attribute [Authorize]
+@using CourseManager.UI.Models
+@using CourseManager.UI.Services
+@using Blazored.Toast.Services;
+@using CourseManager.UI.Services
+@inject ICourseService CourseService
+@inject IAttendeeService AttendeeService
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+
+@if (Id == null)
+{
+    <h1>Create new course</h1>
+}
+else
+{
+    <h1>Edit @course.CourseTitle course</h1>
+}
+<hr />
+
+<EditForm Model="course" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-3">
+        <label for="Title">Course title</label>
+        <InputText id="Title" @bind-Value="course.CourseTitle" class="form-control"></InputText>
+    </div>
+    <div class="mb-3">
+        <label for="Description">Course description</label>
+        <InputTextArea id="Description" @bind-Value="course.CourseDescription" class="form-control"></InputTextArea>
+    </div>
+    <div class="mb-3">
+        <label for="Teacher">Course teacher</label>
+        <InputText id="Teacher" @bind-Value="course.CourseTeacher" class="form-control"></InputText>
+    </div>
+    <div class="mb-3">
+        <label for="TeacherEmail">Course teacher email</label>
+        <InputText id="TeacherEmail" @bind-Value="course.CourseTeacherEmail" class="form-control"></InputText>
+    </div>
+    <div class="row mb-3">
+        <label for="Date">Course date</label>
+        <div class="col-4">
+            <InputDate id="Date" @bind-Value="course.CourseStartDateTime" class="form-control" Type="InputDateType.Date"></InputDate>
+        </div>
+        <div class="col-2">
+            <InputDate id="Date" @bind-Value="course.CourseStartDateTime" class="form-control" Type="InputDateType.Time"></InputDate>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label for="CourseCapacity">Course capacity</label>
+        <InputNumber id="CourseCapacity" @bind-Value="course.MaxNumberOfAtendees" class="form-control"></InputNumber>
+    </div>
+    <div class="mb-3">
+        @if (Id == null)
+        {
+            <label for="PIN">Course edit/delete PIN</label>
+        }
+        else
+        {
+            <label for="PIN">Confirm course edit/delete PIN</label>
+        }
+        <InputText id="PIN" type="password" @bind-Value="course.EditDeleteCoursePIN" class="form-control"></InputText>
+    </div>
+    <br />
+    <button type="submit" class="btn btn-primary mb-5">@btnText</button>
+</EditForm>
+
+
+@if(Id != null) {
+    <hr />
+    <h3>Course attendees</h3>
+
+    @if (course.CourseAttendees.Count > 0)
+    {
+        <table class="table mt-5">
+            <thead>
+                <tr>
+                    <th>First name</th>
+                    <th>Last name</th>
+                    <th>Email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var attendee in course.CourseAttendees)
+                {
+                    <tr>
+                        <td>@attendee.Email</td>
+                        <td>
+                            <button class="btn btn-primary" @onclick="(() => EditAttendee(attendee.Id))">
+                                <i class="oi oi-pencil"></i>
+                            </button>
+                            <button class="btn btn-danger" @onclick="(() => DeleteAttendeeDialog(attendee.Id))">
+                                <i class="oi oi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <span>There are no course attendees to display.</span>
+    }
+}
+
+<PINConfirmationDialog @ref="child" OnClose="@PINConfirmationDialogClose"></PINConfirmationDialog>
+
+@code {
+    PINConfirmationDialog child;
+
+    [Parameter]
+    public int? Id { get; set; }
+
+    string btnText = string.Empty;
+
+    CourseNewEditModel course = new CourseNewEditModel();
+
+    private async void PINConfirmationDialogClose(PINConfirmationModel result)
+    {
+        if (result.IsDialogOk)
+        {
+            if (result.InsertedPIN == null)
+            {
+                ToastService.ShowError("PIN was not inserted!");
+            }
+            else
+            {
+                if (await CourseService.CheckCoursePIN(result.CourseId, result.InsertedPIN))
+                {
+                    if (result.AfterDialogActionType == "edit")
+                    {
+                        NavigationManager.NavigateTo($"/attendee-edit/{result.OtherId.Value}");
+                    }
+                    else
+                    {
+                        await DeleteAttendee(result.OtherId.Value);
+                        StateHasChanged();
+                    }
+                }
+                else
+                {
+                    ToastService.ShowError("Incorrect PIN!");
+                }
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id != null)
+        {
+            var response = await CourseService.GetCourseByIdForCreateEdit((int)Id);
+            if (response.IsSuccessful)
+            {
+                course = response.Data;
+                btnText = "Save changes";
+            }
+            else
+            {
+                ToastService.ShowError(response.Message);
+                course.CourseStartDateTime = DateTime.Now;
+                btnText = "Save";
+            }
+        }
+        else
+        {
+            course.CourseStartDateTime = DateTime.Now;
+            btnText = "Save";
+        } 
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (Id == null)
+        {
+            var response = await CourseService.CreateCourse(course);
+            if (response.IsSuccessful)
+            {
+                ToastService.ShowSuccess(response.Message);
+            }
+            else
+            {
+                ToastService.ShowError(response.Message);
+            }
+        }
+        else
+        {
+            var response = await CourseService.UpdateCourse((int)Id, course);
+            if (response.IsSuccessful)
+            {
+                ToastService.ShowSuccess(response.Message);
+            }
+            else
+            {
+                ToastService.ShowError(response.Message);
+            }
+        }
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void EditAttendee(int Id)
+    {
+        child.ShowPINConfirmationDialog("PIN required!", "PIN is required for ", course.Id, "edit", Id);
+    }
+
+    private async Task DeleteAttendeeDialog(int AttendeeId)
+    {
+        child.ShowPINConfirmationDialog("PIN required!", "PIN is required for ", course.Id, "delete", AttendeeId);
+    }
+
+    private async Task DeleteAttendee(int AttendeeId)
+    {
+        var response = await AttendeeService.DeleteAttendee(AttendeeId);
+        if (response.IsSuccessful)
+        {
+            ToastService.ShowSuccess(response.Message);
+            var responseCourse = await CourseService.GetCourseByIdForCreateEdit((int)Id);
+            if (responseCourse.IsSuccessful)
+            {
+                course = responseCourse.Data;
+            }
+            else
+            {
+                ToastService.ShowError(responseCourse.Message);
+            }
+        }
+        else
+        {
+            ToastService.ShowError(response.Message);
+        }
+    }
+}

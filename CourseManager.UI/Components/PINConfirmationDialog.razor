@@ -1,0 +1,90 @@
+﻿@using CourseManager.UI.Models
+@if (ShowDialog)
+{
+﻿<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">@Title</h4>
+                    <button type="button" class="btn btn-close" @onclick="@ModalCancel"> </button>
+                </div>
+                <div class="modal-body">
+                    <p>@Text <b>@AfterDialogActionType</b>:</p>
+                    <div style="text-align:center">
+                        <input id="PIN" type="password" placeholder="PIN" @bind="PINInserted"></input>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="@ModalOk">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code
+{
+    public int CourseId { get; set; }
+    public int? OtherId { get; set; }
+    public string Title { get; set; } = null!;
+    public string Text { get; set; } = null!;
+    public string AfterDialogActionType { get; set; } = null!;
+    [Parameter]
+    public EventCallback<PINConfirmationModel> OnClose { get; set; }
+
+    public string? PINInserted { get; set; } = null;
+
+    private bool ShowDialog { get; set; } = false;
+
+    public void ShowPINConfirmationDialog(string title, string text, int courseId, string afterDialogType, int? otherId)
+    {
+        ShowDialog = true;
+        Title = title;
+        Text = text;
+        CourseId = courseId;
+        AfterDialogActionType = afterDialogType;
+        OtherId = otherId;
+    }
+
+    private Task ModalCancel()
+    {
+        ShowDialog = false;
+        return OnClose.InvokeAsync(new PINConfirmationModel
+        {
+                IsDialogOk = false,
+                InsertedPIN = null,
+                CourseId = CourseId,
+                OtherId = null,
+                AfterDialogActionType = AfterDialogActionType
+        });
+    }
+
+    private Task ModalOk()
+    {
+        ShowDialog = false;
+        if (PINInserted == null)
+        {
+            return OnClose.InvokeAsync(new PINConfirmationModel
+            {
+                IsDialogOk = true,
+                InsertedPIN = null,
+                CourseId = CourseId,
+                OtherId = null,
+                AfterDialogActionType = AfterDialogActionType
+            });
+        }
+        else
+        {
+            var pin = PINInserted;
+            PINInserted = null;
+            return OnClose.InvokeAsync(new PINConfirmationModel
+            {
+                IsDialogOk = true,
+                InsertedPIN = pin,
+                CourseId = CourseId,
+                OtherId = OtherId,
+                AfterDialogActionType = AfterDialogActionType
+            });
+        }
+    }
+}
