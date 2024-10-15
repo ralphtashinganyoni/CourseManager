@@ -25,8 +25,28 @@
             <div class="flex-outer">
 
                 <div class="form-group">
-                    <label class="form-label">Email Address</label>
+                    <label class="form-label">Email Address*</label>
                     <input autofocus class="form-control" autocomplete="on" required id="email" name="emailInput" placeholder="Enter your email address" type="email" @bind-value="email" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">First Name*</label>
+                    <input autofocus class="form-control" autocomplete="on" required id="firstName" name="firstNameInput" placeholder="Enter your first name" type="text" @bind-value="firstName" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Last Name*</label>
+                    <input autofocus class="form-control" autocomplete="on" required id="lastName" name="lastNameInput" placeholder="Enter your last name" type="text" @bind-value="lastName" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phone Number*</label>
+                    <input autofocus class="form-control" autocomplete="on" required id="phoneNumber" name="phoneNumberInput" placeholder="Enter your phone number" type="number" @bind-value="phoneNumber" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Physical Address</label>
+                    <input autofocus class="form-control" autocomplete="on" required id="physicalAddress" name="physicalAddressInput" placeholder="Enter your physical address" type="text" @bind-value="physicalAddress" />
                 </div>
 
                 <div class="form-group">
@@ -50,6 +70,10 @@
 @code {
     private bool success, errors;
     private string email = string.Empty;
+    private string firstName = string.Empty;
+    private string lastName = string.Empty;
+    private string phoneNumber = string.Empty;
+    private string physicalAddress = string.Empty;
     private string password = string.Empty;
     private string confirmPassword = string.Empty;
     private string[] errorList = [];
@@ -62,37 +86,62 @@
         if (string.IsNullOrWhiteSpace(email))
         {
             errors = true;
-            errorList = ["Email is required."];
-            return;
+            errorList = errorList.Append("Email is required.").ToArray();
+        }
+
+        if (string.IsNullOrWhiteSpace(firstName))
+        {
+            errors = true;
+            errorList = errorList.Append("First Name is required.").ToArray();
+        }
+
+        if (string.IsNullOrWhiteSpace(lastName))
+        {
+            errors = true;
+            errorList = errorList.Append("Last Name is required.").ToArray();
+        }
+
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            errors = true;
+            errorList = errorList.Append("Phone Number is required.").ToArray();
+        }
+
+        if (string.IsNullOrWhiteSpace(physicalAddress))
+        {
+            errors = true;
+            errorList = errorList.Append("Physical Address is required.").ToArray();
         }
 
         if (string.IsNullOrWhiteSpace(password))
         {
             errors = true;
-            errorList = ["Password is required."];
-            return;
+            errorList = errorList.Append("Password is required.").ToArray();
         }
 
         if (string.IsNullOrWhiteSpace(confirmPassword))
         {
             errors = true;
-            errorList = ["Please confirm your password."];
-            return;
+            errorList = errorList.Append("Please confirm your password.").ToArray();
         }
 
         if (password != confirmPassword)
         {
             errors = true;
-            errorList = ["Passwords don't match."];
+            errorList = errorList.Append("Passwords don't match.").ToArray();
+        }
+
+        if (errors)
+        {
             return;
         }
 
-        var result = await Acct.RegisterAsync(email!, password!);
+        var result = await Acct.RegisterAsync(email, firstName, lastName, phoneNumber, physicalAddress, password);
 
         if (result.Succeeded)
         {
             success = true;
-            email = password = confirmPassword = string.Empty;
+            email = firstName = lastName = phoneNumber = physicalAddress = password = confirmPassword = string.Empty;
         }
         else
         {

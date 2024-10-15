@@ -129,8 +129,6 @@ else
             }
             else
             {
-                if (await CourseService.CheckCoursePIN(result.CourseId, result.InsertedPIN))
-                {
                     if (result.AfterDialogActionType == "edit")
                     {
                         NavigationManager.NavigateTo($"/attendee-edit/{result.OtherId.Value}");
@@ -140,11 +138,7 @@ else
                         await DeleteAttendee(result.OtherId.Value);
                         StateHasChanged();
                     }
-                }
-                else
-                {
-                    ToastService.ShowError("Incorrect PIN!");
-                }
+                
             }
         }
     }

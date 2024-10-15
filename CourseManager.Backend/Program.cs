@@ -1,3 +1,6 @@
+using CourseManager.Domain.Entities;
+using CourseManager.Infrastructure;
+using CourseManager.Infrastructure.Context;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
@@ -6,20 +9,10 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// cookie authentication
-builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
-
 // configure authorization
 builder.Services.AddAuthorizationBuilder();
 
-// add the database (in memory for the sample)
-builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("AppDb"));
-
-// add identity and opt-in to endpoints
-builder.Services.AddIdentityCore<MyUser>()
-    .AddEntityFrameworkStores<AppDbContext>()
-    .AddApiEndpoints();
-
+ServiceRegistration.ConfigureServices(builder);
 // add CORS policy for Wasm client
 builder.Services.AddCors(
     options => options.AddPolicy(
@@ -34,23 +27,12 @@ builder.Services.AddCors(
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddControllers();
 var app = builder.Build();
-
-// create routes for the identity endpoints
-app.MapIdentityApi<MyUser>();
-
-app.MapPost("/Logout", async (
-           ClaimsPrincipal user,
-           SignInManager<MyUser> signInManager) =>
-{
-    await signInManager.SignOutAsync();
-    return TypedResults.Ok();
-});
 
 // activate the CORS policy
 app.UseCors("wasm");
-
+app.MapControllers();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -60,12 +42,3 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.Run();
-
-// identity user
-class MyUser : IdentityUser { }
-
-// identity database
-class AppDbContext : IdentityDbContext<MyUser>
-{
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-}

@@ -23,7 +23,5 @@ namespace CourseManager.UI.Entities
         [Required]
         [StringLength(150, MinimumLength = 2)]
         public string CourseTeacherEmail { get; set; } = null!;
-        [Required]
-        public string EditDeleteCoursePIN { get; set; } = null!;
     }
 }

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Cryptography.KeyDerivation;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System.Text;
 using CourseManager.UI.DTOs;
 using CourseManager.UI.Entities;
@@ -11,25 +10,12 @@ namespace CourseManager.UI.Services
     public class CourseService : ICourseService
     {
         private readonly ApplicationDbContext _context;
-        private readonly byte[] salt = Encoding.ASCII.GetBytes("opakjogpkjdopajgkoirkjatki");
 
         public CourseService(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        public async Task<bool> CheckCoursePIN(int id, string pin)
-        {
-            var course = await _context.Courses.FirstOrDefaultAsync(x => x.Id == id);
-            var hashedPin = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-                    password: pin,
-                    salt: salt,
-                    prf: KeyDerivationPrf.HMACSHA256,
-                    iterationCount: 100000,
-                    numBytesRequested: 256 / 8));
-
-            return hashedPin == course.EditDeleteCoursePIN;
-        }
 
         public async Task<bool> CheckIfCourseCapacityFull(int id)
         {
@@ -48,13 +34,6 @@ namespace CourseManager.UI.Services
                 CourseTeacherEmail = course.CourseTeacherEmail,
                 CourseStartDateTime = course.CourseStartDateTime,
                 MaxNumberOfAtendees = course.MaxNumberOfAtendees,
-
-                EditDeleteCoursePIN = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-                    password: course.EditDeleteCoursePIN,
-                    salt: salt,
-                    prf: KeyDerivationPrf.HMACSHA256,
-                    iterationCount: 100000,
-                    numBytesRequested: 256 / 8)),
             };
 
             try
@@ -308,9 +287,6 @@ namespace CourseManager.UI.Services
                     Message = "Selected course cannot be found"
                 };
             }
-
-            if (await CheckCoursePIN(id, course.EditDeleteCoursePIN))
-            {
                 courseFromDb.CourseTitle = course.CourseTitle;
                 courseFromDb.CourseDescription = course.CourseDescription;
                 courseFromDb.CourseTeacher = course.CourseTeacher;
@@ -319,16 +295,6 @@ namespace CourseManager.UI.Services
                 courseFromDb.MaxNumberOfAtendees = course.MaxNumberOfAtendees;
 
                 await _context.SaveChangesAsync();
-            }
-            else
-            {
-                return new ProcessResponse
-                {
-                    IsSuccessful = false,
-                    Message = "Incorrect PIN! Course update failed"
-                };
-            }
-
             return new ProcessResponse
             {
                 IsSuccessful = true,

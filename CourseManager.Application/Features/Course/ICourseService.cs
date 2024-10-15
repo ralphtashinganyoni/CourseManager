@@ -1,18 +1,18 @@
-﻿using CourseManager.UI.DTOs;
-using CourseManager.UI.Models;
+﻿using CourseManager.Domain.DTOs;
+using CourseManager.Domain.Models;
 
-namespace CourseManager.UI.Services
+namespace CourseManager.Application.Features.User
 {
     public interface ICourseService
     {
         public Task<PageResponse<CoursesListModel>> GetAllCourses(int curPage, int pageSize, string searchString, DateTime? dateFrom, DateTime? dateTo);
         public Task<PageResponse<CoursesListModel>> GetUserEnrolledCourses(string userId, int curPage, int pageSize, string searchString, DateTime? dateFrom, DateTime? dateTo);
         public Task<PageResponse<CoursesListModel>> GetCoursesUserIsNotEnrolledIn(string userId, int curPage, int pageSize, string searchString, DateTime? dateFrom, DateTime? dateTo);
-        public Task<ProcessResponse<CourseNewEditModel>> GetCourseByIdForCreateEdit(int id);
-        public Task<ProcessResponse<CourseDetailsModel>> GetCourseDetailsById(int id);
+        public Task<ProcessResponse<CourseNewEditModel>> GetCourseByIdForCreateEdit(string id);
+        public Task<ProcessResponse<CourseDetailsModel>> GetCourseDetailsById(string id);
         public Task<ProcessResponse> CreateCourse(CourseNewEditModel course);
-        public Task<ProcessResponse> UpdateCourse(int id, CourseNewEditModel course);
-        public Task<ProcessResponse> DeleteCourse(int id);
-        public Task<bool> CheckIfCourseCapacityFull(int id);
+        public Task<ProcessResponse> UpdateCourse(string id, CourseNewEditModel course);
+        public Task<ProcessResponse> DeleteCourse(string id);
+        public Task<bool> CheckIfCourseCapacityFull(string id);
     }
 }

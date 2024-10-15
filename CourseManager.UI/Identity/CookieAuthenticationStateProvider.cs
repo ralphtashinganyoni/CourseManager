@@ -50,7 +50,7 @@ namespace CourseManager.UI.Identity
         /// <param name="password">The user's password.</param>
         /// <returns>The result serialized to a <see cref="FormResult"/>.
         /// </returns>
-        public async Task<FormResult> RegisterAsync(string email, string password)
+        public async Task<FormResult> RegisterAsync(string email, string firstName, string lastName, string phoneNumber, string physicalAddress, string password)
         {
             string[] defaultDetail = ["An unknown error prevented registration from succeeding."];
 
@@ -58,9 +58,13 @@ namespace CourseManager.UI.Identity
             {
                 // make the request
                 var result = await _httpClient.PostAsJsonAsync(
-                    "register", new
+                    "/api/Account/register", new
                     {
                         email,
+                        firstName,
+                        lastName,
+                        phoneNumber,
+                        physicalAddress,
                         password
                     });
 
@@ -122,7 +126,7 @@ namespace CourseManager.UI.Identity
             {
                 // login with cookies
                 var result = await _httpClient.PostAsJsonAsync(
-                    "login?useCookies=true", new
+                    "/api/Account/login", new
                     {
                         email,
                         password
@@ -166,7 +170,7 @@ namespace CourseManager.UI.Identity
             try
             {
                 // the user info endpoint is secured, so if the user isn't logged in this will fail
-                var userResponse = await _httpClient.GetAsync("manage/info");
+                var userResponse = await _httpClient.GetAsync("/api/Account/manage/info");
 
                 // throw if user info wasn't retrieved
                 userResponse.EnsureSuccessStatusCode();
@@ -202,7 +206,7 @@ namespace CourseManager.UI.Identity
 
         public async Task LogoutAsync()
         {
-            await _httpClient.PostAsync("Logout", null);
+            await _httpClient.PostAsync("/api/Account/logout", null);
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         }
 
